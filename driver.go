@@ -37,6 +37,11 @@ func (p *polarisDriver) GetName() string {
 }
 
 func (p *polarisDriver) RegisterGrpcResolver() {
+	// 禁用北极星sdk的日志
+	api.SetLoggersLevel(api.NoneLog)
+	// 创建主调端consumer
+	consumer, err := api.NewConsumerAPIByConfig(api.NewConfiguration())
+	dtmimp.FatalIfError(err)
 	gp.Init(gp.Conf{PolarisConsumer: consumer})
 }
 
@@ -53,6 +58,14 @@ func firstIp() net.IP {
 // RegisterGrpcService 向北极星注册dtm server服务
 // target polaris://ip:port/service?namespace=[Test,Pre-release,Production]
 func (p *polarisDriver) RegisterGrpcService(target, token string) error {
+	var err error
+	// 主要考虑是dtmsvr的初始化，如果使用其他driver，polaris的consumer和provider不都应该初始化
+	if provider == nil {
+		provider, err = api.NewProviderAPI()
+	}
+	if err != nil {
+		return err
+	}
 	// token为空不注册，用于托管服务的场景
 	if token == "" {
 		return nil
@@ -176,13 +189,5 @@ func (p *polarisDriver) ParseServerMethod(uri string) (server string, method str
 }
 
 func init() {
-	var err error
-	provider, err = api.NewProviderAPI()
-	dtmimp.FatalIfError(err)
 	dtmdriver.Register(&polarisDriver{})
-	// 禁用北极星sdk的日志
-	api.SetLoggersLevel(api.NoneLog)
-	// 创建主调端consumer
-	consumer, err = api.NewConsumerAPIByConfig(api.NewConfiguration())
-	dtmimp.FatalIfError(err)
 }
