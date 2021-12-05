@@ -14,7 +14,6 @@ import (
 	gp "github.com/polarismesh/grpc-go-polaris"
 	"github.com/polarismesh/polaris-go/api"
 	"github.com/polarismesh/polaris-go/pkg/model"
-	"github.com/yedf/dtm/dtmcli/dtmimp"
 	"github.com/yedf/dtmdriver"
 )
 
@@ -37,11 +36,14 @@ func (p *polarisDriver) GetName() string {
 }
 
 func (p *polarisDriver) RegisterGrpcResolver() {
+	var err error
 	// 禁用北极星sdk的日志
 	api.SetLoggersLevel(api.NoneLog)
 	// 创建主调端consumer
-	consumer, err := api.NewConsumerAPIByConfig(api.NewConfiguration())
-	dtmimp.FatalIfError(err)
+	consumer, err = api.NewConsumerAPIByConfig(api.NewConfiguration())
+	if err != nil {
+		panic(err)
+	}
 	gp.Init(gp.Conf{PolarisConsumer: consumer})
 }
 
@@ -127,7 +129,7 @@ func (p *polarisDriver) RegisterGrpcService(target, token string) error {
 	// 心跳上报&关闭的反注册
 	go func() {
 		if err = provider.Heartbeat(hbReq); nil != err {
-			dtmimp.LogRedf("polaris heartbeat error %s", err.Error())
+			fmt.Println("polaris heartbeat error", err)
 		}
 		quit := make(chan os.Signal)
 		signal.Notify(
@@ -142,7 +144,7 @@ func (p *polarisDriver) RegisterGrpcService(target, token string) error {
 			select {
 			case <-ticker.C:
 				if err = provider.Heartbeat(hbReq); nil != err {
-					dtmimp.LogRedf("polaris heartbeat error %s", err.Error())
+					fmt.Println("polaris heartbeat error", err)
 				}
 			case <-quit:
 				provider.Deregister(&api.InstanceDeRegisterRequest{
